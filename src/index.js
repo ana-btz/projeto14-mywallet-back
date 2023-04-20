@@ -24,6 +24,11 @@ const loginSchema = joi.object({
     senha: joi.string().min(3).required()
 });
 
+const transacaoSchema = joi.object({
+    valor: joi.number().min(0).required(),
+    descricao: joi.string().required()
+});
+
 // Conexão com o MongoDb
 const mongoClient = new MongoClient(process.env.DATABASE_URL);
 
@@ -85,6 +90,44 @@ app.post("/", async (req, res) => {
         // Guardar token associado ao id do usuario
         await db.collection("sessoes").insertOne({ idUsuario: usuario._id, token });
         res.status(200).send(token);
+
+    } catch (error) {
+        res.status(500).send(error.message);
+    }
+});
+
+app.post("/nova-transacao/:tipo", async (req, res) => {
+    const { valor, descricao } = req.body;
+    const { auth } = req.headers; // auth -> Bearer token
+    const tipo = req.params.tipo;
+
+    // Verificar se foi enviado o token 
+    if (!auth) return res.sendStatus(401);
+
+    // Formatar o token para o formato esperado
+    const token = auth?.replace("Bearer", "");
+
+    // Validar os dados recebidos pelo body
+    const { error } = transacaoSchema.validate(req.body, { abortEarly: false });
+    if (error) res.status(422).send(error.details.map(d => d.message));
+
+    try {
+        // Verificar se token existe no BD
+        const sessao = await db.collection("sessoes").findOne({ token });
+        if (!sessao) return res.status(401).send("Token inválido");
+
+        const entrada = tipo && tipo === "entrada";
+        const saida = tipo && tipo === "saida";
+
+        // Inserir os dados de transação no BD
+        if (entrada) {
+            await db.collection("entradas").insertOne({ valor, descricao, idUsuario: sessao.idUsuario });
+            return res.sendStatus(200);
+        }
+        if (saida) {
+            await db.collection("saidas").insertOne({ valor, descricao, idUsuario: sessao.idUsuario });
+            return res.sendStatus(200);
+        }
 
     } catch (error) {
         res.status(500).send(error.message);
