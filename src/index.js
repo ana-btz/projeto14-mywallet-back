@@ -4,6 +4,7 @@ import express from "express";
 import dotenv from "dotenv";
 import joi from "joi";
 import { MongoClient } from "mongodb";
+import { v4 as uuid } from 'uuid';
 
 const app = express();
 
@@ -12,8 +13,13 @@ app.use(cors());
 app.use(express.json());
 
 // Schemas
-const usuarioSchema = joi.object({
+const cadastroSchema = joi.object({
     nome: joi.string().required(),
+    email: joi.string().email().required(),
+    senha: joi.string().min(3).required()
+});
+
+const loginSchema = joi.object({
     email: joi.string().email().required(),
     senha: joi.string().min(3).required()
 });
@@ -36,7 +42,7 @@ app.post("/cadastro", async (req, res) => {
     const { nome, email, senha } = req.body;
 
     // Validar os dados recebidos pelo body
-    const { error } = usuarioSchema.validate(req.body, { abortEarly: false })
+    const { error } = cadastroSchema.validate(req.body, { abortEarly: false })
     if (error) return res.status(422).send(error.details.map(d => d.message));
 
     try {
@@ -55,6 +61,34 @@ app.post("/cadastro", async (req, res) => {
         res.status(500).send(error.message);
     }
 
+});
+
+app.post("/", async (req, res) => {
+    const { email, senha } = req.body;
+
+    // Validar os dados recebidos pelo body
+    const { error } = loginSchema.validate(req.body, { abortEarly: false });
+    if (error) return res.status(422).send(error.details.map(d => d.message));
+
+    try {
+        // Validar se email existe
+        const usuario = await db.collection("usuarios").findOne({ email });
+        if (!usuario) return res.status(404).send("Usuário ou senha incorretos");
+
+        // Validar senha
+        const senhaCorreta = bcrypt.compareSync(senha, usuario.senha);
+        if (!senhaCorreta) return res.status(401).send("Usuário ou senha incorretos");
+
+        // Criar o token
+        const token = uuid();
+
+        // Guardar token associado ao id do usuario
+        await db.collection("sessoes").insertOne({ idUsuario: usuario._id, token });
+        res.status(200).send(token);
+
+    } catch (error) {
+        res.status(500).send(error.message);
+    }
 });
 
 const port = process.env.PORT || 5000;
