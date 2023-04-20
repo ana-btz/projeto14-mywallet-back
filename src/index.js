@@ -5,7 +5,6 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const app = express();
-const PORT = 5000;
 
 app.use(cors());
 app.use(express.json());
@@ -23,5 +22,5 @@ try {
 
 const db = mongoClient.db("mywallet");
 
-
-app.listen(PORT, () => console.log(`Servidor rodando na porta: ${PORT}`));
+const port = process.dotenv.PORT || 5000;
+app.listen(port, () => console.log(`Servidor rodando na porta: ${port}`));
