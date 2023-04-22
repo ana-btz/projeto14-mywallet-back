@@ -109,25 +109,21 @@ app.post("/nova-transacao/:tipo", async (req, res) => {
 
     // Validar os dados recebidos pelo body
     const { error } = transacaoSchema.validate(req.body, { abortEarly: false });
-    if (error) res.status(422).send(error.details.map(d => d.message));
+    if (error) return res.status(422).send(error.details.map(d => d.message));
 
     try {
         // Verificar se token existe no BD
         const sessao = await db.collection("sessoes").findOne({ token });
         if (!sessao) return res.status(401).send("Token inválido");
 
-        const entrada = tipo && tipo === "entrada";
-        const saida = tipo && tipo === "saida";
-
         // Inserir os dados de transação no BD
-        if (entrada) {
-            await db.collection("entradas").insertOne({ valor, descricao, idUsuario: sessao.idUsuario });
-            return res.sendStatus(200);
-        }
-        if (saida) {
-            await db.collection("saidas").insertOne({ valor, descricao, idUsuario: sessao.idUsuario });
-            return res.sendStatus(200);
-        }
+        await db.collection("transacoes").insertOne({
+            tipo,
+            valor: +valor,
+            descricao,
+            idUsuario: sessao.idUsuario
+        });
+        return res.sendStatus(200);
 
     } catch (error) {
         res.status(500).send(error.message);
