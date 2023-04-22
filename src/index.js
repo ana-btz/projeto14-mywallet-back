@@ -3,7 +3,7 @@ import cors from "cors";
 import express from "express";
 import dotenv from "dotenv";
 import joi from "joi";
-import { MongoClient } from "mongodb";
+import { MongoClient, ObjectId } from "mongodb";
 import { v4 as uuid } from 'uuid';
 
 const app = express();
@@ -124,6 +124,35 @@ app.post("/nova-transacao/:tipo", async (req, res) => {
             idUsuario: sessao.idUsuario
         });
         return res.sendStatus(200);
+
+    } catch (error) {
+        res.status(500).send(error.message);
+    }
+});
+
+app.get("/home", async (req, res) => {
+    const { auth } = req.headers;
+
+    // Verificar se token foi enviado
+    if (!auth) return res.sendStatus(401);
+
+    // converter token para o formato esperado
+    const token = auth.replace("Baerer ", "");
+
+    try {
+        // Encontrar o id do usuário associado ao token
+        const sessao = await db.collection("sessoes").findOne({ token });
+        if (!sessao) return res.status(401).send("Token inválido");
+
+        // Encontrar o usuario associado ao id (se for preciso no front)
+        const usuario = await db.collection("usuarios").findOne({ _id: sessao.idUsuario });
+        if (!usuario) return res.status(404).send("Usuário não encontrado");
+
+        // Encontrar as transações associadas ao usuário
+        const transacoes = await db.collection("transacoes").find({ idUsuario: sessao.idUsuario }).toArray();
+        if (!transacoes) return res.sendStatus(404);
+
+        res.status(200).send(transacoes);
 
     } catch (error) {
         res.status(500).send(error.message);
