@@ -60,7 +60,7 @@ app.post("/cadastro", async (req, res) => {
 
         // Guardar dados do usuario no BD
         await db.collection("usuarios").insertOne({ nome, email, senha: hash });
-        res.sendStatus(201);
+        res.status(201).send("Usuário cadastrado com sucesso");
 
     } catch (error) {
         res.status(500).send(error.message);
