@@ -148,12 +148,16 @@ app.get("/home", async (req, res) => {
         const usuario = await db.collection("usuarios").findOne({ _id: sessao.idUsuario });
         if (!usuario) return res.status(404).send("Usuário não encontrado");
 
+        // Não deve enviar a senha
+        delete usuario.senha;
+
         // Encontrar as transações associadas ao usuário
         const transacoes = await db.collection("transacoes").find({ idUsuario: sessao.idUsuario }).toArray();
         if (!transacoes) return res.sendStatus(404);
 
         const dadosUsuario = { usuario, transacoes };
 
+        // enviar dados do usuário para o cliente
         res.status(200).send(dadosUsuario);
 
     } catch (error) {
