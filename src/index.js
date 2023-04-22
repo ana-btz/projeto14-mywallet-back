@@ -152,7 +152,9 @@ app.get("/home", async (req, res) => {
         const transacoes = await db.collection("transacoes").find({ idUsuario: sessao.idUsuario }).toArray();
         if (!transacoes) return res.sendStatus(404);
 
-        res.status(200).send(transacoes);
+        const dadosUsuario = { usuario, transacoes };
+
+        res.status(200).send(dadosUsuario);
 
     } catch (error) {
         res.status(500).send(error.message);
