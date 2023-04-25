@@ -41,12 +41,10 @@ export async function login(req, res) {
     // Guardar token associado ao id do usuario
     await db.collection("sessoes").insertOne({ idUsuario: usuario._id, token });
 
-    // Não deve enviar a senha
-    delete usuario.senha;
-
-    const dadosUsuario = { usuario, token };
-
+    // Enviar obj no formato { id, nome, token }
+    const dadosUsuario = { id: usuario._id, nome: usuario.nome, token };
     res.status(200).send(dadosUsuario);
+    
   } catch (error) {
     res.status(500).send(error.message);
   }
